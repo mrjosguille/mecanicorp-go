@@ -1,0 +1,321 @@
+/* --- VARIABLES DE MARCA --- */
+:root {
+  --mecanicorp-blue: #023f8f;
+  --mecanicorp-blue-light: #1e5cb3;
+  --bg-body: #f4f7f6;
+  --bg-card: #ffffff;
+  --text-main: #334155;
+  --text-muted: #64748b;
+  --border-color: #e2e8f0;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg-body);
+  color: var(--text-main);
+}
+
+/* --- LAYOUT PRINCIPAL --- */
+.app-container {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* --- BARRA LATERAL (SIDEBAR) --- */
+.sidebar {
+  width: 260px;
+  background-color: var(--mecanicorp-blue);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+  z-index: 10;
+}
+
+.sidebar-header {
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+/* TU LOGO CONFIGURADO EXACTAMENTE COMO LO PEDISTE */
+.sidebar-header img {
+  width: 70%; /* Mantenemos tu ancho */
+  height: auto;
+  min-height: 90px; /* Forzamos una altura mínima para que no se vea enano */
+  object-fit: contain; /* Asegura que el logo mantenga su proporción */
+  background-color: #023f8f; /* Fondo azul configurado por ti */
+  padding: 10px 10px; /* Un poco de espacio interno */
+  border-radius: 8px;
+}
+
+.sidebar-menu {
+  flex: 1;
+  padding: 20px 0;
+  overflow-y: auto;
+}
+
+.sidebar-menu ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-menu li {
+  margin: 0;
+}
+
+.sidebar-menu a {
+  display: flex;
+  align-items: center;
+  padding: 12px 25px;
+  color: rgba(255,255,255,0.7);
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border-left: 4px solid transparent;
+}
+
+.sidebar-menu a:hover, .sidebar-menu a.active {
+  background-color: rgba(255,255,255,0.1);
+  color: white;
+  border-left-color: #60a5fa; /* Azul claro para el indicador activo */
+}
+
+.sidebar-menu a span {
+  margin-right: 12px;
+  font-size: 18px;
+  width: 20px;
+  text-align: center;
+}
+
+/* --- CONTENIDO PRINCIPAL --- */
+.main-content {
+  flex: 1;
+  padding: 30px;
+  overflow-y: auto;
+  background-color: var(--bg-body);
+}
+
+.main-content h1, .main-content h2, .main-content h3 {
+  color: var(--mecanicorp-blue);
+  margin-top: 0;
+}
+
+/* --- TARJETAS Y CONTENEDORES --- */
+.card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  padding: 25px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border-color);
+}
+
+/* --- TABLAS MODERNAS --- */
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+th {
+  background-color: #f8fafc;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 12px;
+  padding: 12px 15px;
+  border-bottom: 1px solid var(--border-color);
+  text-align: left;
+}
+
+td {
+  padding: 15px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-size: 14px;
+}
+
+tr:hover td {
+  background-color: #f8fafc;
+}
+
+/* --- BOTONES --- */
+.btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-primary {
+  background-color: var(--mecanicorp-blue);
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:hover {
+  background-color: var(--mecanicorp-blue-light);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-success {
+  background-color: #10b981;
+  color: white;
+}
+
+.btn-danger {
+  background-color: #ef4444;
+  color: white;
+}
+
+.btn-secondary {
+  background-color: #e2e8f0;
+  color: var(--text-main);
+}
+
+/* --- INPUTS --- */
+input[type="text"], input[type="number"], input[type="date"], select, textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--text-main);
+  background-color: white;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--mecanicorp-blue);
+  box-shadow: 0 0 0 3px rgba(2, 63, 143, 0.1);
+}
+
+/* --- MODALES --- */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex; justify-content: center; align-items: center;
+  z-index: 1000; padding: 20px;
+}
+
+.modal-content {
+  background-color: white; padding: 30px; border-radius: 16px;
+  box-shadow: var(--shadow-lg); max-width: 100%; max-height: 90vh; overflow-y: auto;
+}
+
+/* --- ESTILOS DE PROFORMA (HOJA) --- */
+.paper-container {
+  background-color: white;
+  max-width: 21.59cm;
+  min-height: 27.94cm;
+  margin: 0 auto;
+  padding: 1.2cm;
+  box-shadow: 0 0 20px rgba(0,0,0,0.15);
+  font-family: Arial, Helvetica, sans-serif;
+  color: #000;
+  box-sizing: border-box;
+  font-size: 12px;
+}
+
+.uppercase-paper, .uppercase-paper input, .uppercase-paper textarea, .uppercase-paper span {
+  text-transform: uppercase !important;
+}
+
+.paper-container input, .paper-container textarea {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+}
+
+/* --- FOOTER --- */
+.app-footer {
+  margin-top: auto;
+  padding: 20px 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-color);
+  width: 100%;
+}
+
+.app-footer strong {
+  color: var(--mecanicorp-blue);
+}
+
+.app-footer span {
+  display: block;
+  margin-top: 5px;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+/* --- IMPRESIÓN --- */
+@media print {
+  .sidebar, .print-hide, button { display: none !important; }
+  .main-content { padding: 0 !important; margin: 0 !important; }
+  .paper-container { box-shadow: none !important; margin: 0 !important; max-width: 100% !important; height: 100vh !important; padding: 1cm !important; }
+  body { background-color: white !important; }
+  .modal-overlay { position: absolute; background-color: white; padding: 0; height: auto; }
+  @page { size: letter; margin: 0; }
+}
+/* --- OCULTAR BARRAS DE SCROLL (Para que se vea más limpio) --- */
+/* Ocultar en Chrome, Safari y Edge */
+::-webkit-scrollbar {
+  width: 6px; /* Hacemos la barra muy delgadita y elegante */
+}
+
+::-webkit-scrollbar-track {
+  background: transparent; /* El fondo de la barra es invisible */
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2); /* Color sutil de la barrita */
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* Para el menú lateral específicamente, que la barra sea casi invisible */
+.sidebar-menu::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar-menu::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Para el contenido principal (fondo blanco), la barra será gris clarito */
+.main-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* --- ARREGLO VISUAL DEL MENÚ LATERAL --- */
+/* Esto hace que el menú azul llegue hasta abajo sin cortes raros */
+.sidebar {
+  height: 100vh;
+  position: sticky;
+  top: 0;
+}
