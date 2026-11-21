@@ -111,10 +111,8 @@ export default function ControlCalidad() {
     cargarDatos();
   };
 
-  return (
+   return (
     <div>
-      <h2 style={{ marginBottom: '20px' }}>Control de Calidad</h2>
-
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
         <button onClick={() => setPestanaActiva('PENDIENTES')} style={{ padding: '10px 20px', background: pestanaActiva === 'PENDIENTES' ? '#1e4b8f' : '#ccc', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>Pendientes de Revisión</button>
         <button onClick={() => setPestanaActiva('HISTORIAL')} style={{ padding: '10px 20px', background: pestanaActiva === 'HISTORIAL' ? '#1e4b8f' : '#ccc', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>Historial de Evaluaciones</button>

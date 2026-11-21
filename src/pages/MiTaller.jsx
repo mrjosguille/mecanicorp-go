@@ -39,8 +39,8 @@ export default function MiTaller() {
     if (data) setEmpleados(data);
   };
 
-   const cargarMisOrdenes = async (empId) => {
-    // AQUÍ ESTÁ LA MAGIA: Solo traemos las OTs que NO estén finalizadas ni cerradas
+  const cargarMisOrdenes = async (empId) => {
+    // Solo traemos las OTs que NO estén finalizadas ni cerradas
     const { data: ots } = await supabase.from('ordenes_trabajo')
       .select('*')
       .eq('empleado_id', empId)
@@ -85,6 +85,11 @@ export default function MiTaller() {
     setMaterialSeleccionado('');
     setCantidad(1);
     
+    // OBTENER MATERIALES YA PEDIDOS PARA ESTA OT
+    const { data: pedidosActuales } = await supabase.from('ot_materiales').select('repuesto_id, insumo_id').eq('ot_id', ot.id);
+    const repuestosPedidosIds = pedidosActuales?.filter(p => p.repuesto_id).map(p => p.repuesto_id) || [];
+    const insumosPedidosIds = pedidosActuales?.filter(p => p.insumo_id).map(p => p.insumo_id) || [];
+
     if (tipo === 'REPUESTO') {
       const { data: profData } = await supabase.from('proformas').select('id, numero_proforma').eq('vehiculo_id', ot.vehiculo_id).order('fecha', { ascending: false }).limit(1);
       
@@ -93,14 +98,21 @@ export default function MiTaller() {
         const { data: llegadas } = await supabase.from('recepcion_repuestos').select('id, nombre_repuesto').eq('numero_proforma', profData[0].numero_proforma).neq('estado', 'RECHAZADO');
         
         if (repData) {
-          const repuestosConEstado = repData.map(rep => {
-            const llegada = llegadas?.find(l => l.nombre_repuesto.toUpperCase() === rep.descripcion.toUpperCase());
-            return { 
-              ...rep, 
-              id_fisico: llegada ? llegada.id : null, 
-              disponible: !!llegada 
-            };
-          });
+          const repuestosConEstado = repData
+            .filter(rep => {
+                // Verificamos si este repuesto ya fue pedido. Si la llegada física existe, comparamos por su ID físico
+                const llegada = llegadas?.find(l => l.nombre_repuesto.toUpperCase() === rep.descripcion.toUpperCase());
+                const idFisico = llegada ? llegada.id : null;
+                return !repuestosPedidosIds.includes(idFisico); // Solo lo mostramos si NO está en la lista de pedidos
+            })
+            .map(rep => {
+              const llegada = llegadas?.find(l => l.nombre_repuesto.toUpperCase() === rep.descripcion.toUpperCase());
+              return { 
+                ...rep, 
+                id_fisico: llegada ? llegada.id : null, 
+                disponible: !!llegada 
+              };
+            });
           setListaMaterialesOriginal(repuestosConEstado);
           setListaMaterialesFiltrada(repuestosConEstado);
         }
@@ -108,7 +120,9 @@ export default function MiTaller() {
     } else {
       const { data: insData } = await supabase.from('insumos_taller').select('id, nombre, stock_actual').gt('stock_actual', 0);
       if (insData) {
-        const insumosFormateados = insData.map(i => ({ ...i, disponible: true, id_fisico: i.id }));
+        const insumosFormateados = insData
+          .filter(i => !insumosPedidosIds.includes(i.id)) // Filtramos los ya pedidos
+          .map(i => ({ ...i, disponible: true, id_fisico: i.id }));
         setListaMaterialesOriginal(insumosFormateados);
         setListaMaterialesFiltrada(insumosFormateados);
       }
@@ -217,7 +231,6 @@ export default function MiTaller() {
           <h3>No hay vehículos asignados a este trabajador</h3>
         </div>
       ) : (
-        // AQUI ESTA EL CAMBIO CLAVE: GRID DE 2 COLUMNAS
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '15px', maxWidth: '1200px', margin: '0 auto' }}>
           
           <div style={{ gridColumn: '1 / -1', background: cargoActual === 'MECANICO' ? '#e0f2fe' : '#fce7f3', padding: '10px 20px', borderRadius: '8px', marginBottom: '5px', color: cargoActual === 'MECANICO' ? '#0369a1' : '#be185d', fontWeight: 'bold', textAlign: 'center' }}>

@@ -16,7 +16,7 @@ export default function Proformas() {
   // ESTADOS PARA LOS MODALES
   const [modalClienteAbierto, setModalClienteAbierto] = useState(false);
   const [modalVehiculoAbierto, setModalVehiculoAbierto] = useState(false);
-  
+
   const estadoInicial = {
     numero_proforma: `${Math.floor(Date.now() / 1000).toString().slice(-5)}`,
     fecha: new Date().toLocaleDateString('es-BO'),
@@ -177,11 +177,11 @@ export default function Proformas() {
   };
 
   return (
-    <div>
+        <div>
       <div className="print-hide">
-        <h2 style={{ marginBottom: '20px' }}>Módulo de Proformas</h2>
+        {/* BARRA DE ACCIONES LIMPIA */}
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', alignItems: 'center' }}>
-          <button onClick={() => { setProforma(estadoInicial); setMostrarFormulario(true); setProformaSeleccionada(null); }} style={{ padding: '10px 20px', background: '#1e4b8f', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '16px' }}>
+          <button onClick={() => { setProforma(estadoInicial); setMostrarFormulario(true); setProformaSeleccionada(null); }} style={{ padding: '10px 20px', background: '#1e4b8f', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold' }}>
             + Crear Nueva Proforma
           </button>
           <input type="text" placeholder="🔍 Buscar por Placa, Cliente o N° Proforma..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} style={{ padding: '10px', width: '350px', borderRadius: '5px', border: '1px solid #ccc', fontSize: '14px' }} />
@@ -267,13 +267,14 @@ export default function Proformas() {
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                  <div style={{ width: '30%', display: 'flex', alignItems: 'flex-end', gap: '10px' }}>
+                                   <div style={{ width: '30%', display: 'flex', alignItems: 'flex-end', gap: '10px' }}>
                     <strong style={{ marginRight: '5px', whiteSpace: 'nowrap' }}>VEHÍCULO: </strong>
                     {mostrarFormulario ? (
                       <>
                         <input type="text" list="lista-placas" placeholder="PLACA" value={proforma.placa_buscada} onChange={(e) => buscarPorPlaca(e.target.value)} style={{ width: '80px', borderBottom: '1px solid #000' }} />
                         <datalist id="lista-placas">{vehiculos.map(v => <option key={v.id} value={v.placa} />)}</datalist>
-                        <button type="button" onClick={() => setModalVehiculoAbierto(true)} style={{ fontSize: '11px', background: '#e74c3c', color: 'white', padding: '3px 8px', border: 'none', borderRadius: '3px', cursor: 'pointer', whiteSpace: 'nowrap', fontWeight: 'bold' }}>+ NUEVO</button>
+                        {/* BOTÓN SIEMPRE VISIBLE */}
+                        <button type="button" onClick={() => setModalVehiculoAbierto(true)} style={{ position: 'relative', zIndex: 10, fontSize: '11px', background: '#e74c3c', color: 'white', padding: '3px 8px', border: 'none', borderRadius: '3px', cursor: 'pointer', whiteSpace: 'nowrap', fontWeight: 'bold' }}>+ NUEVO</button>
                       </>
                     ) : proformaSeleccionada?.vehiculos?.placa}
                   </div>

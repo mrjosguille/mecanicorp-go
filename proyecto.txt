@@ -1,0 +1,37 @@
+C:\Users\USUARIO\Desktop\mecanicorp-go
+├── eslint.config.js
+├── index.html
+├── package.json
+├── public
+|  ├── favicon.svg
+|  ├── icons.svg
+|  └── logo-mecanicorp.png
+├── README.md
+├── src
+|  ├── App.css
+|  ├── App.jsx
+|  ├── assets
+|  |  ├── hero.png
+|  |  ├── react.svg
+|  |  └── vite.svg
+|  ├── components
+|  |  ├── ModalCliente.jsx
+|  |  └── ModalVehiculo.jsx
+|  ├── index.css
+|  ├── main.jsx
+|  ├── pages
+|  |  ├── Almacen.jsx
+|  |  ├── Clientes.jsx
+|  |  ├── ControlCalidad.jsx
+|  |  ├── EntregaCliente.jsx
+|  |  ├── MiTaller.jsx
+|  |  ├── OrdenesTrabajo.jsx
+|  |  ├── Proformas.jsx
+|  |  ├── Recepcion.jsx
+|  |  └── Vehiculos.jsx
+|  └── supabaseClient.js
+└── vite.config.js
+
+directory: 265 file: 583
+
+ignored: directory (36), file (1)

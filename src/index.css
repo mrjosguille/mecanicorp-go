@@ -109,3 +109,7 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+/* Forzar mayúsculas visualmente en todos los inputs y selects */
+input, select, textarea {
+  text-transform: uppercase !important;
+}

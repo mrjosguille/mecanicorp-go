@@ -24,7 +24,9 @@ export default function Recepcion() {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-
+  // Estados para la ventana personalizada y el botón de guardar
+  const [alerta, setAlerta] = useState({ visible: false, mensaje: '' });
+  const [guardando, setGuardando] = useState(false); // <-- Nuevo
   // Estados del Formulario
   const [vehiculos, setVehiculos] = useState([]);
   const [clientes, setClientes] = useState([]);
@@ -176,9 +178,11 @@ export default function Recepcion() {
     setChecklist(checklist.map(c => ({ ...c, estado: 'SI' })));
   };
 
-  const guardarRecepcion = async (e) => {
+    const guardarRecepcion = async (e) => {
     e.preventDefault();
     if (!vehiculoSeleccionado) return alert("⛔ VEHÍCULO NO REGISTRADO. Regístrelo primero.");
+    
+    setGuardando(true); // 
 
     const { data: recGuardada, error } = await supabase.from('recepciones').insert([{
       vehiculo_id: vehiculoSeleccionado.id,
@@ -215,7 +219,8 @@ export default function Recepcion() {
       }
     }
 
-    alert("¡Recepción guardada exitosamente!");
+     setAlerta({ visible: true, mensaje: '¡Recepción guardada exitosamente!' });
+    setGuardando(false); 
     limpiarFormulario();
     setVista('LISTA');
     cargarRecepciones();
@@ -490,9 +495,21 @@ export default function Recepcion() {
           }
         </div>
 
-        {!esDetalle && (
-          <button className="print-hide" onClick={guardarRecepcion} style={{ width: '100%', padding: '15px', background: '#1e4b8f', color: 'white', border: 'none', borderRadius: '5px', fontSize: '16px', cursor: 'pointer' }}>
-            💾 GUARDAR RECEPCIÓN
+                {!esDetalle && (
+          <button 
+            className="print-hide" 
+            onClick={guardarRecepcion} 
+            disabled={guardando} // <-- Se desactiva si está guardando
+            style={{ 
+              width: '100%', padding: '15px', 
+              background: guardando ? '#94a3b8' : '#1e4b8f', // Gris si está guardando
+              color: 'white', border: 'none', borderRadius: '5px', fontSize: '16px', 
+              cursor: guardando ? 'not-allowed' : 'pointer',
+              fontWeight: 'bold',
+              transition: 'background 0.3s'
+            }}
+          >
+            {guardando ? '⏳ GUARDANDO RECEPCIÓN...' : '💾 GUARDAR RECEPCIÓN'}
           </button>
         )}
       </div>
@@ -592,8 +609,23 @@ export default function Recepcion() {
         </div>
       )}
 
-      {modalVehiculoAbierto && <ModalVehiculo onClose={() => setModalVehiculoAbierto(false)} onVehiculoAgregado={(v) => { setVehiculos([...vehiculos, v]); setPlacaBusqueda(v.placa); setVehiculoSeleccionado(v); }} />}
+           {modalVehiculoAbierto && <ModalVehiculo onClose={() => setModalVehiculoAbierto(false)} onVehiculoAgregado={(v) => { setVehiculos([...vehiculos, v]); setPlacaBusqueda(v.placa); setVehiculoSeleccionado(v); }} />}
       {modalClienteAbierto && <ModalCliente onClose={() => setModalClienteAbierto(false)} onClienteAgregado={(c) => { setClientes([...clientes, c]); setClienteNombre(c.nombre); setTelefono(c.telefono || ''); }} />}
+
+      {/* VENTANA PERSONALIZADA DE MECANICORP */}
+      {console.log("¿Se debe mostrar la ventana?", alerta.visible)}
+      {alerta.visible && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 99999 }}>
+          <div style={{ background: 'white', padding: '30px', borderRadius: '12px', width: '350px', textAlign: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
+            <img src="/logo-mecanicorp.png" alt="Mecanicorp" style={{ width: '100px', marginBottom: '15px' }} />
+            <h3 style={{ margin: '0 0 10px 0', color: '#1e4b8f' }}>Mecanicorp Go</h3>
+            <p style={{ color: '#475569', marginBottom: '25px', fontSize: '15px' }}>{alerta.mensaje}</p>
+            <button onClick={() => setAlerta({ visible: false, mensaje: '' })} style={{ padding: '10px 30px', background: '#1e4b8f', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', width: '100%' }}>
+              Aceptar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

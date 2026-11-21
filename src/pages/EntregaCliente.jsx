@@ -126,7 +126,7 @@ export default function EntregaCliente() {
     const res = await fetch(firmaDataUrl);
     const blob = await res.blob();
     await supabase.storage.from('recepciones_fotos').upload(fileName, blob);
-    const { data: urlData } = supabase.storage.from('recepciones_fotos').getPublicUrl(fileName);
+    const { data: urlData } = await supabase.storage.from('recepciones_fotos').getPublicUrl(fileName);
 
     // 2. Subir fotos finales
     const urlsFotos = [];
@@ -134,7 +134,7 @@ export default function EntregaCliente() {
       const ext = foto.file.name.split('.').pop();
       const fName = `entrega_${otSeleccionada.id}_${Date.now()}.${ext}`;
       await supabase.storage.from('recepciones_fotos').upload(fName, foto.file);
-      const { data: fUrl } = supabase.storage.from('recepciones_fotos').getPublicUrl(fName);
+      const { data: fUrl } = await supabase.storage.from('recepciones_fotos').getPublicUrl(fName);
       urlsFotos.push(fUrl.publicUrl);
     }
 
@@ -153,31 +153,28 @@ export default function EntregaCliente() {
     // 4. Cerrar la OT
     await supabase.from('ordenes_trabajo').update({ estado: 'CERRADO' }).eq('id', otSeleccionada.id);
 
-    // 5. GENERAR KARDEX (Pago al trabajador)
+    // 5. GENERAR KARDEX (Pago al trabajador) - DEJAMOS EL CÁLCULO BÁSICO POR AHORA
     const { data: otData } = await supabase.from('ordenes_trabajo').select('*, empleados(id)').eq('id', otSeleccionada.id).single();
     if (otData && otData.empleado_id) {
-        // Por defecto asumimos 50% de comisión, luego se puede cambiar
-        const porcentaje = 50; 
-        const montoPago = (otData.proforma_total * porcentaje) / 100;
+        const montoBase = otData.monto_aprobado_seguro > 0 ? otData.monto_aprobado_seguro : otData.proforma_total;
+        const montoPago = montoBase / 2; // 50% simple
         
         await supabase.from('kardex_pagos').insert([{
             ot_id: otData.id,
             empleado_id: otData.empleado_id,
-            monto_total_ot: otData.proforma_total,
-            porcentaje_aplicado: porcentaje,
+            monto_total_ot: montoBase,
+            porcentaje_aplicado: 50,
             monto_a_pagar: montoPago
         }]);
     }
 
-    alert("✅ Vehículo entregado. Acta firmada y Kardex generado.");
+    alert("✅ Vehículo entregado. Acta firmada.");
     setModalAbierto(false);
     cargarOrdenesListas();
   };
 
   return (
     <div>
-      <h2 style={{ marginBottom: '20px' }}>Entrega al Cliente</h2>
-
       <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
         <h3>Vehículos Listos para Entregar</h3>
         {ordenesListas.length === 0 ? (
@@ -208,14 +205,13 @@ export default function EntregaCliente() {
         )}
       </div>
 
-      {/* MODAL DE ENTREGA FINAL CON CHECKLIST */}
+      {/* MODAL DE ENTREGA FINAL */}
       {modalAbierto && otSeleccionada && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
           <div style={{ background: 'white', padding: '30px', borderRadius: '8px', width: '700px', maxHeight: '90vh', overflowY: 'auto' }}>
             <h3 style={{ marginBottom: '10px', color: '#1e4b8f' }}>Acta de Entrega Final</h3>
             <p style={{ marginBottom: '20px' }}>Vehículo: <strong>{otSeleccionada.vehiculos?.placa}</strong> - Cliente: <strong>{otSeleccionada.recepciones?.cliente_nombre}</strong></p>
 
-            {/* AVISO DE REPUESTOS PENDIENTES */}
             {repuestosPendientes && (
               <div style={{ background: '#fff3cd', border: '1px solid #ffeeba', color: '#856404', padding: '15px', borderRadius: '5px', marginBottom: '20px' }}>
                 <strong>⚠️ ATENCIÓN: Repuestos Pendientes de Llegada:</strong><br/>
@@ -225,7 +221,7 @@ export default function EntregaCliente() {
             )}
 
             <div style={{ marginBottom: '20px', background: '#f9f9f9', padding: '15px', borderRadius: '5px' }}>
-              <h4 style={{ marginBottom: '10px' }}>Checklist de Entrega (Verificación Física):</h4>
+              <h4 style={{ marginBottom: '10px' }}>Checklist de Entrega:</h4>
               {checklist.map((c, index) => (
                 <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #eee', padding: '8px 0' }}>
                   <span>{c.item}</span>
@@ -237,9 +233,9 @@ export default function EntregaCliente() {
             </div>
 
             <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Observaciones del Cliente:</label>
-            <textarea value={observaciones} onChange={e => setObservaciones(e.target.value)} rows="2" style={{ width: '100%', padding: '10px', marginBottom: '20px', textTransform: 'uppercase' }} placeholder="Ej. Todo conforme, excelente trabajo."></textarea>
+            <textarea value={observaciones} onChange={e => setObservaciones(e.target.value)} rows="2" style={{ width: '100%', padding: '10px', marginBottom: '20px', textTransform: 'uppercase' }}></textarea>
 
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Fotos del Estado Final (Opcional):</label>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Fotos Finales:</label>
             <input type="file" accept="image/*" multiple ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} />
             <button type="button" onClick={() => fileInputRef.current.click()} style={{ padding: '8px 15px', background: '#3498db', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginBottom: '10px' }}>📷 Cargar Fotos</button>
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '20px' }}>
@@ -265,7 +261,7 @@ export default function EntregaCliente() {
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
               <button onClick={() => setModalAbierto(false)} style={{ padding: '10px 20px', cursor: 'pointer', borderRadius: '5px', border: '1px solid #ccc' }}>Cancelar</button>
               <button onClick={confirmarEntrega} disabled={!checklist.every(c => c.ok)} style={{ padding: '10px 20px', background: checklist.every(c => c.ok) ? '#27ae60' : '#ccc', color: 'white', border: 'none', borderRadius: '5px', cursor: checklist.every(c => c.ok) ? 'pointer' : 'not-allowed', fontWeight: 'bold' }}>
-                {checklist.every(c => c.ok) ? 'Confirmar Entrega' : 'Faltan Ítems en Checklist'}
+                Confirmar Entrega
               </button>
             </div>
           </div>

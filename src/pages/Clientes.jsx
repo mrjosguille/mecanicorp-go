@@ -60,76 +60,87 @@ export default function Clientes() {
 
   return (
     <div>
-      <h2>Directorio de Clientes</h2>
-
-      {mostrarFormulario && (
-        <form onSubmit={guardarCliente} style={{ background: 'white', padding: '20px', marginBottom: '20px', borderRadius: '8px', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
-          <h3>{clienteActual.id ? 'Editar Cliente' : 'Nuevo Cliente'}</h3>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', maxWidth: '600px', marginBottom: '20px' }}>
-            <div>
-              <label>Nombre Completo / Razón Social:</label>
-              <input type="text" value={clienteActual.nombre} onChange={e => setClienteActual({...clienteActual, nombre: e.target.value})} required style={{ width: '100%', padding: '8px', textTransform: 'uppercase' }} />
-            </div>
-            <div>
-              <label>CI / NIT:</label>
-              <input type="text" value={clienteActual.ci_nit} onChange={e => setClienteActual({...clienteActual, ci_nit: e.target.value})} style={{ width: '100%', padding: '8px', textTransform: 'uppercase' }} />
-            </div>
-            <div>
-              <label>Teléfono:</label>
-              <input type="text" value={clienteActual.telefono} onChange={e => setClienteActual({...clienteActual, telefono: e.target.value})} style={{ width: '100%', padding: '8px' }} />
-            </div>
-            <div>
-              <label>Email:</label>
-              <input type="email" value={clienteActual.email} onChange={e => setClienteActual({...clienteActual, email: e.target.value})} style={{ width: '100%', padding: '8px', textTransform: 'uppercase' }} />
-            </div>
-            <div style={{ gridColumn: 'span 2' }}>
-              <label>Dirección:</label>
-              <input type="text" value={clienteActual.direccion} onChange={e => setClienteActual({...clienteActual, direccion: e.target.value})} style={{ width: '100%', padding: '8px', textTransform: 'uppercase' }} />
-            </div>
-          </div>
-
-          <button type="submit" style={{ padding: '10px 20px', background: 'green', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
-            {clienteActual.id ? 'Guardar Cambios' : 'Guardar Cliente'}
+      {/* BARRA DE ACCIONES (Botón a la derecha) */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
+        {!mostrarFormulario && (
+          <button onClick={() => setMostrarFormulario(true)} className="btn btn-primary">
+            + Nuevo Cliente
           </button>
-          <button type="button" onClick={cerrarFormulario} style={{ marginLeft: '10px', padding: '10px', cursor: 'pointer' }}>Cancelar</button>
-        </form>
+        )}
+      </div>
+
+      {/* FORMULARIO (Usando la clase .card de tu App.css) */}
+      {mostrarFormulario && (
+        <div className="card" style={{ marginBottom: '20px' }}>
+          <h3 style={{ marginBottom: '20px' }}>{clienteActual.id ? 'Editar Cliente' : 'Nuevo Cliente'}</h3>
+          
+          <form onSubmit={guardarCliente}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>Nombre Completo / Razón Social:</label>
+                <input type="text" value={clienteActual.nombre} onChange={e => setClienteActual({...clienteActual, nombre: e.target.value})} required style={{ textTransform: 'uppercase' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>CI / NIT:</label>
+                <input type="text" value={clienteActual.ci_nit} onChange={e => setClienteActual({...clienteActual, ci_nit: e.target.value})} style={{ textTransform: 'uppercase' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>Teléfono:</label>
+                <input type="text" value={clienteActual.telefono} onChange={e => setClienteActual({...clienteActual, telefono: e.target.value})} />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>Email:</label>
+                <input type="email" value={clienteActual.email} onChange={e => setClienteActual({...clienteActual, email: e.target.value})} style={{ textTransform: 'uppercase' }} />
+              </div>
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>Dirección:</label>
+                <input type="text" value={clienteActual.direccion} onChange={e => setClienteActual({...clienteActual, direccion: e.target.value})} style={{ textTransform: 'uppercase' }} />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button type="submit" className="btn btn-primary">
+                {clienteActual.id ? 'Guardar Cambios' : 'Guardar Cliente'}
+              </button>
+              <button type="button" onClick={cerrarFormulario} className="btn btn-secondary">
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
       )}
 
-      {!mostrarFormulario && (
-        <button onClick={() => setMostrarFormulario(true)} style={{ padding: '10px', background: 'blue', color: 'white', border: 'none', borderRadius: '5px', marginBottom: '20px', cursor: 'pointer' }}>
-          + Nuevo Cliente
-        </button>
-      )}
-
-      {clientes.length === 0 ? (
-        <p>No hay clientes registrados aún.</p>
-      ) : (
-        <table style={{ width: '100%', background: 'white', borderCollapse: 'collapse', textAlign: 'left' }}>
-          <thead>
-            <tr style={{ background: '#eee' }}>
-              <th style={{ padding: '10px' }}>Nombre</th>
-              <th style={{ padding: '10px' }}>Teléfono</th>
-              <th style={{ padding: '10px' }}>Email</th>
-              <th style={{ padding: '10px' }}>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {clientes.map(c => (
-              <tr key={c.id} style={{ borderBottom: '1px solid #ddd' }}>
-                <td style={{ padding: '10px', fontWeight: 'bold' }}>{c.nombre}</td>
-                <td style={{ padding: '10px' }}>{c.telefono}</td>
-                <td style={{ padding: '10px' }}>{c.email}</td>
-                <td style={{ padding: '10px' }}>
-                  <button onClick={() => editarCliente(c)} style={{ padding: '5px 10px', background: '#f39c12', color: 'white', border: 'none', borderRadius: '3px', cursor: 'pointer' }}>
-                    Editar
-                  </button>
-                </td>
+      {/* TABLA (Usando las clases globales de tu App.css) */}
+      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        {clientes.length === 0 ? (
+          <p style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>No hay clientes registrados aún.</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Teléfono</th>
+                <th>Email</th>
+                <th>Acciones</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+            </thead>
+            <tbody>
+              {clientes.map(c => (
+                <tr key={c.id}>
+                  <td style={{ fontWeight: 'bold' }}>{c.nombre}</td>
+                  <td>{c.telefono}</td>
+                  <td>{c.email}</td>
+                  <td>
+                    <button onClick={() => editarCliente(c)} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '12px' }}>
+                      Editar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }

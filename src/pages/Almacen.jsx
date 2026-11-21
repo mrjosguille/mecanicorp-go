@@ -24,9 +24,16 @@ export default function Almacen() {
   const [obsLlegada, setObsLlegada] = useState('');
   const [cantidadRecibida, setCantidadRecibida] = useState(1);
 
-  // --- ESTADOS INSUMOS ---
+  // --- NUEVOS ESTADOS PARA INVENTARIO ---
   const [insumos, setInsumos] = useState([]);
-  const [nuevoInsumo, setNuevoInsumo] = useState({ nombre: '', categoria: '', unidad_medida: '', stock_actual: 0 });
+  const [insumoSeleccionadoId, setInsumoSeleccionadoId] = useState('');
+  const [cantidadIngreso, setCantidadIngreso] = useState("");
+  const [precioIngreso, setPrecioIngreso] = useState("");
+  const [historialInventario, setHistorialInventario] = useState([]);
+
+  // --- ESTADOS MODAL NUEVO INSUMO ---
+  const [modalNuevoInsumo, setModalNuevoInsumo] = useState(false);
+  const [nuevoInsumoForm, setNuevoInsumoForm] = useState({ nombre: '', precio_unitario: "", stock_minimo: "" });
 
   // --- ESTADOS HISTORIAL E INVENTARIO ---
   const [historialRecepciones, setHistorialRecepciones] = useState([]);
@@ -41,7 +48,7 @@ export default function Almacen() {
   const [filtroSolicitudes, setFiltroSolicitudes] = useState('');
   const [filtroEntregas, setFiltroEntregas] = useState('');
   
-  // Modales
+  // Modales Generales
   const [modalEntregaAbierto, setModalEntregaAbierto] = useState(false);
   const [modalFirmaAbierto, setModalFirmaAbierto] = useState(false);
   const [firmaUrlSeleccionada, setFirmaUrlSeleccionada] = useState('');
@@ -50,7 +57,7 @@ export default function Almacen() {
   const canvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
 
-  // Al cambiar de rol, forzamos la pestaña inicial de ese rol
+  // Cargar datos iniciales según el rol
   useEffect(() => {
     if (rolActual === 'ALMACENERO') {
       setPestanaActiva('REPUESTOS');
@@ -58,11 +65,12 @@ export default function Almacen() {
     } else {
       setPestanaActiva('INSUMOS');
       cargarInsumos();
+      cargarHistorialInventario();
     }
   }, [rolActual]);
 
   useEffect(() => {
-    if (pestanaActiva === 'INSUMOS') cargarInsumos();
+    if (pestanaActiva === 'INSUMOS') { cargarInsumos(); cargarHistorialInventario(); }
     if (pestanaActiva === 'INVENTARIO') cargarHistorial();
     if (pestanaActiva === 'SOLICITUDES') cargarSolicitudes();
     if (pestanaActiva === 'ENTREGAS') cargarHistorialEntregas();
@@ -105,7 +113,7 @@ export default function Almacen() {
     setFirmaDataUrl('');
   };
 
-  // --- CARGAR DATOS ---
+  // --- CARGAR DATOS REPUESTOS ---
   const cargarPendientes = async () => {
     const { data: repuestos } = await supabase.from('proforma_repuestos_solicitados').select(`*, proformas ( numero_proforma, vehiculos (placa, marca, modelo), clientes (nombre) )`);
     const { data: recepciones } = await supabase.from('recepcion_repuestos').select('*');
@@ -131,7 +139,6 @@ export default function Almacen() {
     setResultadosBusqueda(filtrados);
   };
 
-  // --- ACCIONES DE RECEPCIÓN ---
   const abrirModalRecepcion = (rep) => {
     setRepuestoSeleccionado(rep);
     setEstadoLlegada('COMPLETO');
@@ -159,20 +166,69 @@ export default function Almacen() {
     cargarPendientes(); 
   };
 
-  // --- CARGAR DATOS GENERALES ---
+  // --- LÓGICA DE INSUMOS ---
   const cargarInsumos = async () => {
     const { data } = await supabase.from('insumos_taller').select('*').order('nombre');
     if (data) setInsumos(data);
   };
 
-  const guardarInsumo = async (e) => {
+  const cargarHistorialInventario = async () => {
+    const { data } = await supabase.from('inventario_movimientos')
+      .select('*, insumos_taller(nombre)')
+      .order('fecha', { ascending: false }).limit(50);
+    if (data) setHistorialInventario(data);
+  };
+
+  const guardarNuevoInsumo = async (e) => {
     e.preventDefault();
+    if (!nuevoInsumoForm.nombre) return alert("El nombre es obligatorio");
+    
     await supabase.from('insumos_taller').insert([{
-      nombre: nuevoInsumo.nombre.toUpperCase(), categoria: nuevoInsumo.categoria.toUpperCase(),
-      unidad_medida: nuevoInsumo.unidad_medida.toUpperCase(), stock_actual: parseFloat(nuevoInsumo.stock_actual) || 0
+      nombre: nuevoInsumoForm.nombre.toUpperCase(),
+      stock_actual: 0, 
+      precio_unitario: parseFloat(nuevoInsumoForm.precio_unitario) || 0,
+      stock_minimo: parseFloat(nuevoInsumoForm.stock_minimo) || 0
     }]);
-    setNuevoInsumo({ nombre: '', categoria: '', unidad_medida: '', stock_actual: 0 });
+    
+    alert("Insumo añadido al catálogo. Ahora puedes registrar su ingreso.");
+    setModalNuevoInsumo(false);
+    setNuevoInsumoForm({ nombre: '', precio_unitario: "", stock_minimo: "" });
     cargarInsumos();
+  };
+
+  const registrarIngreso = async (e) => {
+    e.preventDefault();
+    const cant = parseFloat(cantidadIngreso) || 0;
+    const prec = parseFloat(precioIngreso) || 0;
+
+    if (!insumoSeleccionadoId) return alert("Seleccione un insumo");
+    if (cant <= 0) return alert("Ingrese una cantidad válida");
+
+    const insumoActual = insumos.find(i => i.id === insumoSeleccionadoId);
+    const nuevoStock = insumoActual.stock_actual + cant;
+    
+    // 1. Actualizar Stock y Precio
+    await supabase.from('insumos_taller').update({
+      stock_actual: nuevoStock,
+      precio_unitario: prec > 0 ? prec : insumoActual.precio_unitario
+    }).eq('id', insumoSeleccionadoId);
+
+    // 2. Guardar en el historial
+    await supabase.from('inventario_movimientos').insert([{
+      insumo_id: insumoSeleccionadoId,
+      tipo_movimiento: 'INGRESO',
+      cantidad: cant,
+      motivo: 'Compra / Llegada a Bodega'
+    }]);
+
+    alert(`✅ Se sumaron ${cant} unidades al stock de ${insumoActual.nombre}`);
+    
+    setInsumoSeleccionadoId('');
+    setCantidadIngreso("");
+    setPrecioIngreso("");
+    
+    cargarInsumos();
+    cargarHistorialInventario();
   };
 
   const cargarHistorial = async () => {
@@ -207,22 +263,36 @@ export default function Almacen() {
     if (actasData && actasData.length > 0) {
       const completas = await Promise.all(actasData.map(async (acta) => {
         const { data: mats } = await supabase.from('ot_materiales').select('*').eq('acta_id', acta.id);
+        
         const detalles = await Promise.all(mats.map(async (mat) => {
             const { data: ot } = await supabase.from('ordenes_trabajo').select('*, vehiculos(placa), empleados(nombre)').eq('id', mat.ot_id).single();
             let nombreMaterial = 'Material';
+            let esInsumo = false;
+
             if (mat.repuesto_id) {
               const { data: rep } = await supabase.from('recepcion_repuestos').select('nombre_repuesto').eq('id', mat.repuesto_id).single();
               if (rep) nombreMaterial = rep.nombre_repuesto;
             } else if (mat.insumo_id) {
               const { data: ins } = await supabase.from('insumos_taller').select('nombre').eq('id', mat.insumo_id).single();
-              if (ins) nombreMaterial = ins.nombre;
+              if (ins) { nombreMaterial = ins.nombre; esInsumo = true; }
             }
-            return { ...mat, placa: ot?.vehiculos?.placa, empleado: ot?.empleados?.nombre, nombreMaterial };
+            return { ...mat, placa: ot?.vehiculos?.placa, empleado: ot?.empleados?.nombre, nombreMaterial, esInsumo };
         }));
-        return { ...acta, detalles };
+
+        const actaEsDeInsumo = detalles.length > 0 ? detalles[0].esInsumo : false;
+        return { ...acta, detalles, actaEsDeInsumo };
       }));
-      setHistorialEntregas(completas);
-    } else setHistorialEntregas([]);
+
+      const entregasFiltradasPorRol = completas.filter(acta => {
+        if (rolActual === 'ALMACENERO') return !acta.actaEsDeInsumo;
+        if (rolActual === 'BODEGUERO') return acta.actaEsDeInsumo;
+        return true; 
+      });
+
+      setHistorialEntregas(entregasFiltradasPorRol);
+    } else {
+      setHistorialEntregas([]);
+    }
   };
 
   // --- LÓGICA DE ENTREGA MÚLTIPLE ---
@@ -324,9 +394,8 @@ export default function Almacen() {
         {rolActual === 'BODEGUERO' && (
           <button onClick={() => setPestanaActiva('INSUMOS')} style={{ padding: '10px 20px', background: pestanaActiva === 'INSUMOS' ? '#1e4b8f' : '#ccc', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>1. Bodega Insumos</button>
         )}
-        {/* Pestañas compartidas */}
-        <button onClick={() => setPestanaActiva('SOLICITUDES')} style={{ padding: '10px 20px', background: pestanaActiva === 'SOLICITUDES' ? '#1e4b8f' : '#ccc', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>3. Solicitudes Pendientes</button>
-        <button onClick={() => setPestanaActiva('ENTREGAS')} style={{ padding: '10px 20px', background: pestanaActiva === 'ENTREGAS' ? '#1e4b8f' : '#ccc', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>4. Historial Entregas</button>
+        <button onClick={() => setPestanaActiva('SOLICITUDES')} style={{ padding: '10px 20px', background: pestanaActiva === 'SOLICITUDES' ? '#1e4b8f' : '#ccc', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>2. Solicitudes Pendientes</button>
+<button onClick={() => setPestanaActiva('ENTREGAS')} style={{ padding: '10px 20px', background: pestanaActiva === 'ENTREGAS' ? '#1e4b8f' : '#ccc', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>3. Historial Entregas</button>
       </div>
 
       {/* --- PESTAÑA: REPUESTOS --- */}
@@ -346,19 +415,101 @@ export default function Almacen() {
          </div>
       )}
 
-      {/* --- PESTAÑA: INSUMOS --- */}
+      {/* --- PESTAÑA: INSUMOS (NUEVO DISEÑO) --- */}
       {pestanaActiva === 'INSUMOS' && rolActual === 'BODEGUERO' && (
         <div style={{ background: 'white', padding: '20px', borderRadius: '8px' }}>
-          <h3>Bodega General (Insumos)</h3>
-          <form onSubmit={guardarInsumo} style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
-            <input type="text" placeholder="Nombre" value={nuevoInsumo.nombre} onChange={e => setNuevoInsumo({...nuevoInsumo, nombre: e.target.value})} style={{ padding: '8px', flex: 2 }} required />
-            <input type="number" placeholder="Stock" value={nuevoInsumo.stock_actual} onChange={e => setNuevoInsumo({...nuevoInsumo, stock_actual: e.target.value})} style={{ padding: '8px', width: '100px' }} />
-            <button type="submit" style={{ padding: '8px 15px', background: '#27ae60', color: 'white', border: 'none', borderRadius: '5px' }}>Agregar</button>
-          </form>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead><tr style={{ background: '#eee' }}><th style={{ padding: '10px' }}>Insumo</th><th style={{ padding: '10px' }}>Stock</th></tr></thead>
-            <tbody>{insumos.map(ins => (<tr key={ins.id} style={{ borderBottom: '1px solid #ddd' }}><td style={{ padding: '10px' }}>{ins.nombre}</td><td style={{ padding: '10px' }}>{ins.stock_actual}</td></tr>))}</tbody>
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h3>Inventario de Insumos</h3>
+            <button onClick={() => setModalNuevoInsumo(true)} style={{ padding: '8px 15px', background: '#3498db', color: 'white', border: 'none', borderRadius: '5px', fontWeight: 'bold' }}>
+              + Añadir al Catálogo
+            </button>
+          </div>
+
+          {/* FORMULARIO DE INGRESO */}
+          <div style={{ background: '#f0fdf4', padding: '15px', borderRadius: '8px', border: '1px solid #bbf7d0', marginBottom: '20px' }}>
+            <h4 style={{ marginTop: 0, color: '#166534' }}>📦 Registrar Ingreso de Mercadería</h4>
+            <form onSubmit={registrarIngreso} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              
+              <div style={{ flex: 2, minWidth: '200px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>Seleccionar Insumo:</label>
+                <select value={insumoSeleccionadoId} onChange={e => {
+                  setInsumoSeleccionadoId(e.target.value);
+                  const ins = insumos.find(i => i.id === e.target.value);
+                  if (ins) { setPrecioIngreso(ins.precio_unitario); }
+                }} style={{ padding: '8px', width: '100%' }} required>
+                  <option value="">Seleccione el insumo que llegó...</option>
+                  {insumos.map(ins => <option key={ins.id} value={ins.id}>{ins.nombre} (Stock: {ins.stock_actual})</option>)}
+                </select>
+              </div>
+
+              <div style={{ flex: 1, minWidth: '80px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>Cant. que llega:</label>
+                <input type="number" min="1" placeholder="0" value={cantidadIngreso} onChange={e => setCantidadIngreso(e.target.value)} style={{ padding: '8px', width: '100%' }} required />
+              </div>
+
+              <div style={{ flex: 1, minWidth: '80px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>Precio (Bs.):</label>
+                <input type="number" placeholder="0.00" value={precioIngreso} onChange={e => setPrecioIngreso(e.target.value)} style={{ padding: '8px', width: '100%' }} />
+              </div>
+
+              <button type="submit" style={{ padding: '9px 20px', background: '#27ae60', color: 'white', border: 'none', borderRadius: '5px', fontWeight: 'bold', height: '38px' }}>Registrar Ingreso</button>
+            </form>
+          </div>
+
+          {/* TABLA DE CATÁLOGO */}
+          <h4>Catálogo Actual y Alertas</h4>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', marginBottom: '30px' }}>
+            <thead>
+              <tr style={{ background: '#eee' }}>
+                <th style={{ padding: '10px' }}>Insumo</th>
+                <th style={{ padding: '10px' }}>Stock</th>
+                <th style={{ padding: '10px' }}>Precio</th>
+                <th style={{ padding: '10px' }}>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {insumos.map(ins => {
+                const bajoStock = ins.stock_actual <= ins.stock_minimo;
+                return (
+                  <tr key={ins.id} style={{ borderBottom: '1px solid #ddd', background: bajoStock ? '#fff3cd' : 'white' }}>
+                    <td style={{ padding: '10px' }}>{ins.nombre}</td>
+                    <td style={{ padding: '10px', fontWeight: 'bold', color: bajoStock ? '#e74c3c' : 'black' }}>{ins.stock_actual}</td>
+                    <td style={{ padding: '10px' }}>Bs. {ins.precio_unitario}</td>
+                    <td style={{ padding: '10px' }}>
+                      {bajoStock ? <span style={{ color: '#e74c3c', fontWeight: 'bold' }}>⚠️ REPONER (Mín: {ins.stock_minimo})</span> : <span style={{ color: '#27ae60', fontWeight: 'bold' }}>✅ OK</span>}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
           </table>
+
+          {/* HISTORIAL DE MOVIMIENTOS */}
+          <h4>Últimos Movimientos de Bodega</h4>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <thead>
+              <tr style={{ background: '#e2e8f0' }}>
+                <th style={{ padding: '10px' }}>Fecha</th>
+                <th style={{ padding: '10px' }}>Insumo</th>
+                <th style={{ padding: '10px' }}>Tipo</th>
+                <th style={{ padding: '10px' }}>Cantidad</th>
+                <th style={{ padding: '10px' }}>Motivo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {historialInventario.map(mov => (
+                <tr key={mov.id} style={{ borderBottom: '1px solid #ddd' }}>
+                  <td style={{ padding: '10px' }}>{new Date(mov.fecha).toLocaleDateString()}</td>
+                  <td style={{ padding: '10px' }}>{mov.insumos_taller?.nombre}</td>
+                  <td style={{ padding: '10px', color: mov.tipo_movimiento === 'INGRESO' ? '#27ae60' : '#e74c3c', fontWeight: 'bold' }}>{mov.tipo_movimiento}</td>
+                  <td style={{ padding: '10px' }}>{mov.cantidad}</td>
+                  <td style={{ padding: '10px' }}>{mov.motivo}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
         </div>
       )}
 
@@ -374,7 +525,7 @@ export default function Almacen() {
         </div>
       )}
 
-      {/* --- PESTAÑA: SOLICITUDES (Filtradas por Rol y Buscador) --- */}
+      {/* --- PESTAÑA: SOLICITUDES --- */}
       {pestanaActiva === 'SOLICITUDES' && (
         <div style={{ background: 'white', padding: '20px', borderRadius: '8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
@@ -416,7 +567,7 @@ export default function Almacen() {
         </div>
       )}
 
-      {/* --- PESTAÑA: HISTORIAL ENTREGAS (Con Buscador y Modal de Firma) --- */}
+      {/* --- PESTAÑA: HISTORIAL ENTREGAS --- */}
       {pestanaActiva === 'ENTREGAS' && (
         <div style={{ background: 'white', padding: '20px', borderRadius: '8px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
@@ -451,7 +602,7 @@ export default function Almacen() {
         </div>
       )}
 
-      {/* MODAL DE RECEPCIÓN */}
+      {/* MODAL DE RECEPCIÓN DE REPUESTOS */}
       {repuestoSeleccionado && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
           <div style={{ background: 'white', padding: '30px', borderRadius: '8px', width: '450px' }}>
@@ -462,6 +613,37 @@ export default function Almacen() {
               <button onClick={() => setRepuestoSeleccionado(null)} style={{ padding: '10px 20px', cursor: 'pointer' }}>Cancelar</button>
               <button onClick={guardarRecepcion} style={{ padding: '10px 20px', background: '#27ae60', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>Guardar</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE NUEVO INSUMO (CATALOGO) */}
+      {modalNuevoInsumo && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+          <div style={{ background: 'white', padding: '30px', borderRadius: '8px', width: '400px' }}>
+            <h3 style={{ marginBottom: '20px', color: '#1e4b8f' }}>Añadir Insumo al Catálogo</h3>
+            <form onSubmit={guardarNuevoInsumo} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>Nombre del Insumo:</label>
+                <input type="text" value={nuevoInsumoForm.nombre} onChange={e => setNuevoInsumoForm({...nuevoInsumoForm, nombre: e.target.value})} style={{ padding: '10px', width: '100%' }} placeholder="Ej. CINTA AISLANTE" required />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>Precio Base (Bs.):</label>
+                <input type="number" value={nuevoInsumoForm.precio_unitario} onChange={e => setNuevoInsumoForm({...nuevoInsumoForm, precio_unitario: e.target.value})} style={{ padding: '10px', width: '100%' }} placeholder="0.00" />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>Alerta Stock Mínimo:</label>
+                <input type="number" value={nuevoInsumoForm.stock_minimo} onChange={e => setNuevoInsumoForm({...nuevoInsumoForm, stock_minimo: e.target.value})} style={{ padding: '10px', width: '100%' }} placeholder="Ej. 5" />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button type="button" onClick={() => setModalNuevoInsumo(false)} style={{ padding: '10px 20px', cursor: 'pointer', borderRadius: '5px', border: '1px solid #ccc' }}>Cancelar</button>
+                <button type="submit" style={{ padding: '10px 20px', background: '#27ae60', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>Crear Insumo</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
