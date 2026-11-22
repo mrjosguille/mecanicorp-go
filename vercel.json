@@ -1,7 +1,7 @@
 {
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!_next/|static/|assets/|favicon.ico|logo-mecanicorp.png|google).*)",
       "destination": "/index.html"
     }
   ]
