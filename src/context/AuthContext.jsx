@@ -15,39 +15,34 @@ export const AuthProvider = ({ children }) => {
     return savedPerfil ? JSON.parse(savedPerfil) : null;
   });
   
-  // Solo mostramos "Cargando" si no hay perfil guardado previamente
-  const [loading, setLoading] = useState(!perfil); 
+   // FORZAMOS EL LOADING A FALSE PARA PROBAR
+  const [loading, setLoading] = useState(false); 
 
-  useEffect(() => {
+    useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) {
         fetchPerfil(session.user.id);
       } else {
         setLoading(false);
-        localStorage.removeItem('mecanicorp_session');
-        localStorage.removeItem('mecanicorp_perfil');
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // Ignoramos los refrescos de token en segundo plano
       if (event !== 'TOKEN_REFRESHED') {
         setSession(session);
         if (session) {
-          localStorage.setItem('mecanicorp_session', JSON.stringify(session));
           fetchPerfil(session.user.id);
         } else {
           setPerfil(null);
           setLoading(false);
-          localStorage.removeItem('mecanicorp_session');
-          localStorage.removeItem('mecanicorp_perfil');
         }
       }
     });
 
+    // ESTO ES CLAVE: Sin dependencias para que solo se ejecute una vez
     return () => subscription.unsubscribe();
-  }, []);
+  }, []); // <--- Asegúrate de que este arreglo esté VACÍO
 
   const fetchPerfil = async (userId) => {
     try {
