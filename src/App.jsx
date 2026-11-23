@@ -18,7 +18,9 @@ import './App.css';
 const RutaProtegida = ({ children, rolesPermitidos }) => {
   const { session, perfil, loading } = useAuth();
 
-  if (loading) return <div style={{ padding: '50px', textAlign: 'center' }}>Cargando sistema...</div>;
+ if (loading && !session && !perfil) {
+  return <div style={{ padding: '50px', textAlign: 'center' }}>Cargando sistema...</div>;
+}
   if (!session) return <Navigate to="/login" />;
   
   if (rolesPermitidos && perfil && !rolesPermitidos.includes(perfil.rol)) {

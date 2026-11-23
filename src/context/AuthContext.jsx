@@ -4,9 +4,50 @@ import { supabase } from '../supabaseClient';
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [session, setSession] = useState(null);
-  const [perfil, setPerfil] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // 1. Inicializamos leyendo del localStorage para que sea instantáneo
+  const [session, setSession] = useState(() => {
+    const savedSession = localStorage.getItem('mecanicorp_session');
+    return savedSession ? JSON.parse(savedSession) : null;
+  });
+  
+  const [perfil, setPerfil] = useState(() => {
+    const savedPerfil = localStorage.getItem('mecanicorp_perfil');
+    return savedPerfil ? JSON.parse(savedPerfil) : null;
+  });
+  
+  // Solo mostramos "Cargando" si no hay perfil guardado previamente
+  const [loading, setLoading] = useState(!perfil); 
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session) {
+        fetchPerfil(session.user.id);
+      } else {
+        setLoading(false);
+        localStorage.removeItem('mecanicorp_session');
+        localStorage.removeItem('mecanicorp_perfil');
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Ignoramos los refrescos de token en segundo plano
+      if (event !== 'TOKEN_REFRESHED') {
+        setSession(session);
+        if (session) {
+          localStorage.setItem('mecanicorp_session', JSON.stringify(session));
+          fetchPerfil(session.user.id);
+        } else {
+          setPerfil(null);
+          setLoading(false);
+          localStorage.removeItem('mecanicorp_session');
+          localStorage.removeItem('mecanicorp_perfil');
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const fetchPerfil = async (userId) => {
     try {
@@ -16,43 +57,25 @@ export const AuthProvider = ({ children }) => {
         .eq('id', userId)
         .single();
       
-      if (error) throw error;
-      setPerfil(data);
+      if (!error && data) {
+        setPerfil(data);
+        localStorage.setItem('mecanicorp_perfil', JSON.stringify(data));
+      }
     } catch (err) {
-      console.error('Error cargando perfil:', err.message);
-      setPerfil(null);
+      console.error("Error perfil:", err);
     } finally {
-      setLoading(false); // <-- ¡Esto evita que se quede cargando para siempre!
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    let mounted = true;
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!mounted) return;
-      setSession(session);
-      if (session?.user?.id) fetchPerfil(session.user.id);
-      else setLoading(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!mounted) return;
-      setSession(session);
-      if (session?.user?.id) {
-        setLoading(true);
-        fetchPerfil(session.user.id);
-      } else {
-        setPerfil(null);
-        setLoading(false);
-      }
-    });
-
-    return () => { mounted = false; subscription.unsubscribe(); };
-  }, []);
-
   const login = (email, password) => supabase.auth.signInWithPassword({ email, password });
-  const logout = () => supabase.auth.signOut();
+  
+  const logout = () => {
+    localStorage.removeItem('mecanicorp_session');
+    localStorage.removeItem('mecanicorp_perfil');
+    localStorage.removeItem('borrador_proforma');
+    return supabase.auth.signOut();
+  };
 
   return (
     <AuthContext.Provider value={{ session, perfil, loading, login, logout }}>
